@@ -1,33 +1,35 @@
 import winston from 'winston';
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL||'info',
-  format: winston.format.combine((
+  level: process.env.LOG_LEVEL || 'http', // 👈 allow http logs
+  format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.errors({stack:true}),
+    winston.format.errors({ stack: true }),
     winston.format.json()
-  )),
-  defaultMeta: { service: 'acquisations' },
+  ),
+  defaultMeta: { service: 'acquisitions' },
   transports: [
-    //
-    // - Write all logs with importance level of `error` or higher to `error.log`
-    //   (i.e., error, fatal, but not other levels)
-    //
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    //
-    // - Write all logs with importance level of `info` or higher to `combined.log`
-    //   (i.e., fatal, error, warn, and info, but not trace)
-    //
-    new winston.transports.File({ filename: 'combined.log' }),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
   ],
 });
 
-//
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-//
+// 👇 Morgan hook
+logger.stream = {
+  write: message => {
+    logger.http(message.trim());
+  },
+};
+
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-  }));
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    })
+  );
 }
+
+export default logger;
